@@ -1,0 +1,79 @@
+# Workout Planner Configuration Template
+# Copy this file to ~/configs/workout-config.yaml and customize for your needs
+
+# Your primary fitness goals
+goals:
+  - Build upper body strength
+  - Improve core stability
+  - Increase overall conditioning
+
+# Physical constraints or limitations to consider
+constraints:
+  - 30-45 min sessions
+  - Training at home
+  # Add any injuries or limitations here, e.g.:
+  # - Lower back sensitivity
+  # - Shoulder mobility issues
+
+# Equipment you have available
+available_equipment:
+  - Dumbbells (5-50 lbs)
+  - Pull-up bar
+  - Resistance bands
+  # Add your equipment here, e.g.:
+  # - Barbell with plates
+  # - Kettlebells
+  # - Bench
+  # - Squat rack
+
+# Training preferences
+preferences:
+  # Training split: full_body, upper_lower, push_pull_legs, or custom
+  split: push_pull_legs
+
+  # How many days per week you want to train
+  frequency_per_week: 4
+
+  # Training style: strength, hypertrophy, endurance, or mixed
+  style: mixed
+
+  # Preferred rep ranges
+  rep_ranges:
+    strength: 3-6
+    hypertrophy: 8-12
+    endurance: 15-20
+
+# Current status and notes (update this periodically)
+current_status:
+  last_updated: "2026-02-22"
+  notes: |
+    Starting fresh with workout planning automation.
+    Focus on building consistent training habits.
+
+  # Recent achievements or milestones
+  recent_progress:
+    - Established baseline strength levels
+
+  # Things to focus on
+  focus_areas:
+    - Form and technique
+    - Progressive overload
+    - Recovery management
+
+# Optional: Specific exercise preferences
+exercise_preferences:
+  # Exercises you particularly enjoy
+  favorite_exercises:
+    - Pull-ups
+    - Dumbbell bench press
+    - Deadlifts
+
+  # Exercises to avoid (if any)
+  avoid_exercises:
+    # - Exercises that cause pain or discomfort
+
+  # Exercise variations you prefer
+  variations:
+    squats: goblet squats, split squats
+    presses: dumbbell press, overhead press
+    rows: bent-over rows, single-arm rows
