@@ -9,6 +9,16 @@ from workout_planner.defaults import WorkoutPlannerDefaults as WPD
 class TaskChecker:
     """Checks Google Tasks for workout completion status."""
 
+    def _check_valid_interface(func):
+        def wrapper(self, *args, **kwargs):
+            if self.service is None:
+                raise Exception(
+                    "Tasks interface not initialized properly; check your secrets"
+                )
+            return func(self, *args, **kwargs)
+
+        return wrapper
+
     def __init__(self, **kwargs):
         self.task_secrets_file = WPD.getKwargsOrDefault("task_secrets_file", **kwargs)
         self.task_refresh_token = WPD.getKwargsOrDefault("task_refresh_token", **kwargs)
@@ -29,13 +39,14 @@ class TaskChecker:
                 headless=True,
                 max_rate_per_sec=1.0,
             )
-        except Exception as e:
-            raise Exception(f"Failed to initialize Google Tasks service: {e}")
+        except:
+            pass  # Service will be None, checked later
 
     def _date_to_google_date(self, date_time):
         """Convert datetime to Google Tasks date format."""
         return f"{date_time.strftime('%Y-%m-%d')}T23:59:59.000Z"
 
+    @_check_valid_interface
     def check_previous_day_workout(self, prefix="P0: Workout"):
         """
         Check if there are ANY incomplete workout tasks (carryover workouts).
@@ -96,6 +107,7 @@ class TaskChecker:
             # Default to assuming no carryover to avoid blocking (conservative approach)
             return True
 
+    @_check_valid_interface
     def create_workout_task(self, title, notes, date=None):
         """
         Create a workout task in Google Tasks.

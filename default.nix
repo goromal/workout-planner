@@ -14,7 +14,10 @@ buildPythonPackage rec {
   build-system = [ setuptools ];
   src = lib.cleanSource ./.;
   propagatedBuildInputs = [
-    # ADD deps
+    pyyaml
+    click
+    anthropic
+    easy-google-auth
   ];
   doCheck = false;
 }

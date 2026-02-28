@@ -1,0 +1,75 @@
+#! /nix/store/rlq03x4cwf8zn73hxaxnx0zn5q9kifls-bash-5.3p3/bin/bash -e
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/mj2x30qajgbc2lwiyfrz1w2zy5p1x7lx-python3.13-google-auth-oauthlib-1.2.3/bin'':'/':'}
+PATH='/nix/store/mj2x30qajgbc2lwiyfrz1w2zy5p1x7lx-python3.13-google-auth-oauthlib-1.2.3/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/xsa61plh8lg41pdpp8hbd143hpczpfh2-icu4c-76.1-dev/bin'':'/':'}
+PATH='/nix/store/xsa61plh8lg41pdpp8hbd143hpczpfh2-icu4c-76.1-dev/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/1067wd13z800ikk53x47f77v2k37983d-c-ares-1.34.5/bin'':'/':'}
+PATH='/nix/store/1067wd13z800ikk53x47f77v2k37983d-c-ares-1.34.5/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/qlhyvvk3shk7wdy0ff9z4c0fif01jab7-grpc-1.76.0/bin'':'/':'}
+PATH='/nix/store/qlhyvvk3shk7wdy0ff9z4c0fif01jab7-grpc-1.76.0/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/16mvwzgk8gcj177k6pm10jj3z3jbmv9n-python3.13-rsa-4.9/bin'':'/':'}
+PATH='/nix/store/16mvwzgk8gcj177k6pm10jj3z3jbmv9n-python3.13-rsa-4.9/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/2n1mr2pnl68p2w0zhvdn192xaci5397c-python3.13-tqdm-4.67.1/bin'':'/':'}
+PATH='/nix/store/2n1mr2pnl68p2w0zhvdn192xaci5397c-python3.13-tqdm-4.67.1/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/a08p0c01w52xp24ssf52p9h7scm75g0y-python3.13-charset-normalizer-3.4.3/bin'':'/':'}
+PATH='/nix/store/a08p0c01w52xp24ssf52p9h7scm75g0y-python3.13-charset-normalizer-3.4.3/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/33a4k5npcrz0yz9n3g3zarkk6vysmxz4-python3.13-huggingface-hub-0.35.3/bin'':'/':'}
+PATH='/nix/store/33a4k5npcrz0yz9n3g3zarkk6vysmxz4-python3.13-huggingface-hub-0.35.3/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/3vg9crbp6bk8id5jvgmkqyaacg52icbc-python3.13-httpx-0.28.1/bin'':'/':'}
+PATH='/nix/store/3vg9crbp6bk8id5jvgmkqyaacg52icbc-python3.13-httpx-0.28.1/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/yi6vbzzahnfgw9j0rsnzhfjan52yggr6-python3.13-distro-1.9.0/bin'':'/':'}
+PATH='/nix/store/yi6vbzzahnfgw9j0rsnzhfjan52yggr6-python3.13-distro-1.9.0/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/data/andrew/dev/anix/sources/workout-planner/nixcopy/bin'':'/':'}
+PATH='/data/andrew/dev/anix/sources/workout-planner/nixcopy/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+PATH=${PATH:+':'$PATH':'}
+PATH=${PATH/':''/nix/store/3lll9y925zz9393sa59h653xik66srjb-python3-3.13.9/bin'':'/':'}
+PATH='/nix/store/3lll9y925zz9393sa59h653xik66srjb-python3-3.13.9/bin'$PATH
+PATH=${PATH#':'}
+PATH=${PATH%':'}
+export PATH
+export PYTHONNOUSERSITE='true'
+exec -a "$0" "/data/andrew/dev/anix/sources/workout-planner/nixcopy/bin/.workout-planner-wrapped"  "$@" 
