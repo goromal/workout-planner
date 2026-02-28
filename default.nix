@@ -8,7 +8,7 @@
   easy-google-auth
 }:
 buildPythonPackage rec {
-  pname = "REPLACEME";
+  pname = "workout-planner";
   version = "0.0.0";
   pyproject = true;
   build-system = [ setuptools ];

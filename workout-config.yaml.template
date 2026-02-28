@@ -43,6 +43,13 @@ preferences:
     hypertrophy: 8-12
     endurance: 15-20
 
+# Claude API settings
+api:
+  # Claude model to use for workout generation
+  # Options: claude-3-5-sonnet-20240620, claude-haiku-4-5-20251001, claude-opus-4-20250514
+  # Haiku is fastest and cheapest, Sonnet is balanced, Opus is most capable
+  model: claude-haiku-4-5-20251001
+
 # Current status and notes (update this periodically)
 current_status:
   last_updated: "2026-02-22"

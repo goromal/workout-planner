@@ -193,7 +193,7 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed):
             # Create refill task if not in dry-run mode
             if not dry_run:
                 try:
-                    task_checker = TaskChecker(**ctx.obj)
+                    refill_task_checker = TaskChecker(**ctx.obj)
 
                     # Check if refill task already exists
                     from datetime import datetime, timedelta
@@ -201,12 +201,11 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed):
                     start_check = today - timedelta(days=7)
 
                     # Query recent tasks to check for existing refill task
-                    from workout_planner.task_checker import TaskChecker
-                    existing_tasks = task_checker.service.tasks().list(
-                        tasklist=task_checker.task_list_id,
+                    existing_tasks = refill_task_checker.service.tasks().list(
+                        tasklist=refill_task_checker.task_list_id,
                         maxResults=100,
                         showCompleted=False,
-                        dueMin=task_checker._date_to_google_date(start_check),
+                        dueMin=refill_task_checker._date_to_google_date(start_check),
                     ).execute()
 
                     refill_exists = any(
@@ -215,7 +214,7 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed):
                     )
 
                     if not refill_exists:
-                        task_checker.create_workout_task(
+                        refill_task_checker.create_workout_task(
                             "P0: Refill Claude API Tokens",
                             "Your Claude API quota has been exceeded. Please refill your tokens at:\n\n"
                             "https://console.anthropic.com/settings/billing\n\n"

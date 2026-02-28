@@ -123,11 +123,28 @@ Provide two parts:
    Example: "Workout: Push Day - Chest Focus"
    NOTE: Do NOT include "P0:" prefix - this will be added automatically
 
-2. WORKOUT DETAILS: Full workout description including:
-   - Warmup
-   - Main exercises with sets/reps
-   - Cool down
-   - Any notes or coaching cues
+2. WORKOUT DETAILS: Full workout description with clear structure for Google Tasks.
+   Format as plain text with clear sections separated by blank lines:
+
+   WARMUP
+   - Exercise 1: details
+   - Exercise 2: details
+
+   MAIN WORKOUT
+   - Exercise 1: sets x reps @ weight
+   - Exercise 2: sets x reps @ weight
+   - Exercise 3: sets x reps @ weight
+
+   COOLDOWN
+   - Exercise 1: details
+   - Exercise 2: details
+
+   NOTES
+   - Any coaching cues or tips
+
+   Keep formatting simple (no markdown, no headers with #, no bold/italic).
+   Use bullet points (-) and blank lines for structure.
+   Be concise but specific with exercise details.
 
 Separate these with "---" on its own line.
 """
@@ -200,12 +217,15 @@ Separate these with "---" on its own line.
         # Build prompt and call Claude API
         prompt = self._build_prompt(config, history, yesterday_completed)
 
+        # Get model from config, default to haiku if not specified
+        model = config.get("api", {}).get("model", "claude-haiku-4-5-20251001")
+
         if self.enable_logging:
-            logging.info("Calling Claude API to generate workout plan...")
+            logging.info(f"Calling Claude API to generate workout plan (model: {model})...")
 
         try:
             message = self.client.messages.create(
-                model="claude-haiku-4-5-20251001",
+                model=model,
                 max_tokens=2048,
                 temperature=0.7,
                 messages=[{"role": "user", "content": prompt}],
@@ -243,8 +263,10 @@ Separate these with "---" on its own line.
 
         except Exception as e:
             error_str = str(e)
-            # Check if this is a token depletion error
-            if "insufficient_quota" in error_str or "quota" in error_str.lower():
+            # Check if this is a credit/quota depletion error
+            if ("credit balance is too low" in error_str or
+                "insufficient_quota" in error_str or
+                "quota" in error_str.lower()):
                 raise Exception(
                     "CLAUDE_API_QUOTA_EXCEEDED: Your Claude API quota has been exceeded. "
                     "Please refill your tokens to continue using the workout planner."
