@@ -51,7 +51,7 @@ class TaskChecker:
         """
         Check if there are ANY incomplete workout tasks (carryover workouts).
 
-        This checks for incomplete workout tasks from ANY previous day, not just yesterday.
+        This checks for incomplete workout tasks from ANY previous day AND today.
         The presence of any incomplete workout task means we should not generate a new one.
 
         Args:
@@ -62,15 +62,14 @@ class TaskChecker:
                   False if there's a carryover workout (incomplete task exists)
         """
         today = datetime.now()
-        # Check from 30 days ago to yesterday
+        # Check from 30 days ago to today (inclusive)
         start_date = today - timedelta(days=30)
-        yesterday = today - timedelta(days=1)
 
         start_date_str = self._date_to_google_date(start_date)
-        yesterday_end_str = self._date_to_google_date(yesterday + timedelta(days=1))
+        today_end_str = self._date_to_google_date(today + timedelta(days=1))
 
         try:
-            # Query all incomplete tasks up to yesterday
+            # Query all incomplete tasks up to today (inclusive)
             results = (
                 self.service.tasks()
                 .list(
@@ -78,7 +77,7 @@ class TaskChecker:
                     maxResults=100,
                     showCompleted=False,  # Only show incomplete tasks
                     dueMin=start_date_str,
-                    dueMax=yesterday_end_str,
+                    dueMax=today_end_str,
                 )
                 .execute()
             )

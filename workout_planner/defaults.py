@@ -11,7 +11,7 @@ class WorkoutPlannerDefaults(object):
     # Task-tools defaults (must match task-tools package exactly)
     TASK_SECRETS_FILE = os.path.expanduser("~/secrets/google/client_secrets.json")
     TASK_REFRESH_TOKEN = os.path.expanduser("~/secrets/google/refresh.json")
-    TASK_LIST_ID = "MTMzOTU3MTU1MTY2OTc1MDQwOTc6MDow"
+    TASK_LIST_ID = "MDY2MzkyMzI4NTQ1MTA0NDUwODY6MDow"
 
     ENABLE_LOGGING = False
 
