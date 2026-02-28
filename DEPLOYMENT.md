@@ -21,10 +21,13 @@ ats-workout-planner job
 ├─ authm refresh (Google Auth)
 ├─ rcrsync sync configs (Sync config file)
 ├─ workout-planner generate
-│   ├─ Check yesterday's task completion
+│   ├─ Check for carryover workouts (incomplete tasks)
+│   ├─ SKIP if carryover exists → Exit
 │   ├─ Load ~/configs/workout-config.yaml
 │   ├─ Load recent history from ~/data/workout/history.jsonl
-│   ├─ Call Claude API for workout generation
+│   ├─ Count workouts completed this week
+│   ├─ SKIP if weekly target reached → Exit
+│   ├─ Call Claude API for workout generation (ONLY if needed)
 │   ├─ Create Google Task "P0: Workout: ..."
 │   └─ Append to history log
 └─ logger success message
@@ -241,12 +244,14 @@ tail -f ~/data/workout/history.jsonl | jq
 1. **05:30 AM** - `ats-workout-planner` runs
    - Authenticates with Google
    - Syncs config from cloud
-   - Checks if yesterday's "P0: Workout: ..." task exists
-   - If task is deleted = completed ✓
-   - If task exists = missed ✗
-   - Calls Claude API with config + history + completion status
-   - Creates new "P0: Workout: ..." task for today
-   - Logs entry to `~/data/workout/history.jsonl`
+   - **Checks for carryover workouts** (incomplete tasks from ANY previous day)
+     - If carryover exists → SKIP (no API call, no new task)
+   - **Checks weekly workout count** from history
+     - If weekly target reached → SKIP (no API call, no new task)
+   - **Only if both checks pass:**
+     - Calls Claude API with config + history + completion status
+     - Creates new "P0: Workout: ..." task for today
+     - Logs entry to `~/data/workout/history.jsonl`
 
 2. **06:00 AM** - `ats-task-migrator` runs
    - Processes all incomplete tasks
@@ -258,8 +263,30 @@ tail -f ~/data/workout/history.jsonl | jq
    - Or leave it if you skip/miss the workout
 
 4. **Next Morning** - Cycle repeats
-   - Your completion status affects next workout generation
+   - Carryover check ensures you finish current workout first
+   - Weekly count ensures you don't exceed your target
    - History builds up for long-term pattern analysis
+
+### API Call Optimization
+
+The system minimizes Claude API calls intelligently:
+
+**API calls are SKIPPED when:**
+- ❌ Carryover workout exists (incomplete task from previous day)
+  - Reason: Finish your current workout before getting a new one
+- ❌ Weekly target reached (e.g., 4/4 workouts done this week)
+  - Reason: You've already hit your weekly goal
+
+**API calls are MADE when:**
+- ✅ No carryover workouts exist
+- ✅ AND weekly target not yet reached
+- Example: 3/4 workouts done this week, no incomplete tasks
+
+**Benefits:**
+- Saves API costs (no unnecessary calls)
+- Prevents workout overload
+- Respects your weekly training frequency
+- Encourages completion of existing workouts
 
 ### Manual Intervention
 

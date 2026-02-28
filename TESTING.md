@@ -24,7 +24,19 @@ This guide shows you how to test the workout planner before deploying it to your
 
 ## Testing Commands
 
-### 1. Dry Run (No Task Creation)
+### 1. Check for Carryover Workouts
+
+See if there are any incomplete workout tasks:
+
+```bash
+workout-planner check-yesterday
+```
+
+Output:
+- ✓ if no carryover workouts (all previous workouts completed)
+- ✗ if carryover workout exists (incomplete task from any previous day)
+
+### 2. Dry Run (May Skip API Call)
 
 Test workout generation without creating tasks or logging history:
 
@@ -33,23 +45,17 @@ workout-planner --enable-logging generate --dry-run
 ```
 
 This will:
-- Check if yesterday's workout was completed
-- Generate today's workout using Claude API
-- Display the workout plan
+- Check for carryover workouts (incomplete tasks)
+- Check if weekly workout target has been reached
+- **SKIP Claude API call** if:
+  - Carryover workout exists, OR
+  - Weekly target reached (e.g., 4 workouts already completed this week)
+- **CALL Claude API** only if new workout is needed
+- Display the workout plan (if generated)
 - **NOT** create a Google Task
 - **NOT** log to history
 
-### 2. Check Yesterday's Completion
-
-See if yesterday's workout task exists (to determine if it was completed):
-
-```bash
-workout-planner check-yesterday
-```
-
-Output:
-- ✓ if workout was completed (task deleted/not found)
-- ✗ if workout was missed (task still exists)
+**Note**: This is now more efficient - it won't waste API calls when you don't need a workout!
 
 ### 3. Force Completion Status
 
@@ -72,10 +78,12 @@ workout-planner --enable-logging generate
 ```
 
 This will:
-- Check yesterday's completion
-- Generate workout
-- Create Google Task with "P0: Workout: ..." title
-- Log to `~/data/workout/history.jsonl`
+- Check for carryover workouts
+- Check weekly workout target
+- **SKIP API call** if carryover exists or weekly target reached
+- **Generate workout with Claude API** only if needed
+- Create Google Task with "P0: Workout: ..." title (if generated)
+- Log to `~/data/workout/history.jsonl` (if generated)
 
 ### 5. View History
 
@@ -139,6 +147,40 @@ To test the automated job before it runs on schedule:
 authm refresh --headless
 rcrsync sync configs
 workout-planner --enable-logging generate
+```
+
+## API Call Optimization
+
+The system is designed to minimize Claude API calls:
+
+### When API Calls Are SKIPPED:
+
+1. **Carryover Workout Exists**
+   - If any incomplete "P0: Workout" task exists from any previous day
+   - Message: "⚠️  Carryover workout detected"
+   - Reason: You should complete existing workout before getting a new one
+
+2. **Weekly Target Reached**
+   - If you've completed ≥ `frequency_per_week` workouts this week (Mon-Sun)
+   - Message: "✓ Weekly workout target reached"
+   - Reason: You've already hit your weekly goal
+
+### When API Calls ARE MADE:
+
+- No carryover workouts exist
+- AND weekly target not yet reached
+- Example: 3/4 workouts done this week, no incomplete tasks
+
+### Testing API Call Behavior:
+
+```bash
+# Scenario 1: Test with incomplete task (should skip API)
+workout-planner generate  # Creates a task
+workout-planner generate  # Should skip - carryover exists
+
+# Scenario 2: Test weekly limit (should skip API after hitting target)
+# Complete 4 workouts in the same week
+# Next call should skip with "Weekly target reached"
 ```
 
 ## Troubleshooting

@@ -38,29 +38,36 @@ class TaskChecker:
 
     def check_previous_day_workout(self, prefix="P0: Workout"):
         """
-        Check if previous day's workout task exists (not completed).
+        Check if there are ANY incomplete workout tasks (carryover workouts).
+
+        This checks for incomplete workout tasks from ANY previous day, not just yesterday.
+        The presence of any incomplete workout task means we should not generate a new one.
 
         Args:
             prefix: The prefix to search for in task titles (default: "P0: Workout")
 
         Returns:
-            bool: True if workout was completed (task deleted/not found),
-                  False if workout was missed (task still exists)
+            bool: True if no carryover workouts exist (all previous workouts completed),
+                  False if there's a carryover workout (incomplete task exists)
         """
-        yesterday = datetime.now() - timedelta(days=1)
-        yesterday_start = self._date_to_google_date(yesterday - timedelta(days=1))
-        yesterday_end = self._date_to_google_date(yesterday + timedelta(days=1))
+        today = datetime.now()
+        # Check from 30 days ago to yesterday
+        start_date = today - timedelta(days=30)
+        yesterday = today - timedelta(days=1)
+
+        start_date_str = self._date_to_google_date(start_date)
+        yesterday_end_str = self._date_to_google_date(yesterday + timedelta(days=1))
 
         try:
-            # Query tasks from yesterday
+            # Query all incomplete tasks up to yesterday
             results = (
                 self.service.tasks()
                 .list(
                     tasklist=self.task_list_id,
                     maxResults=100,
                     showCompleted=False,  # Only show incomplete tasks
-                    dueMin=yesterday_start,
-                    dueMax=yesterday_end,
+                    dueMin=start_date_str,
+                    dueMax=yesterday_end_str,
                 )
                 .execute()
             )
@@ -70,23 +77,23 @@ class TaskChecker:
             # Check if any task matches the workout prefix
             for item in items:
                 if item.get("title", "").startswith(prefix):
-                    # Task still exists = workout was not completed
+                    # Task still exists = there's a carryover workout
                     if self.enable_logging:
                         logging.info(
-                            f"Found incomplete workout task from yesterday: {item['title']}"
+                            f"Found carryover workout task: {item['title']} (due: {item.get('due', 'unknown')})"
                         )
                     return False
 
-            # No workout task found = it was completed (deleted)
+            # No workout tasks found = all previous workouts completed
             if self.enable_logging:
-                logging.info("Yesterday's workout task not found - assuming completed")
+                logging.info("No carryover workout tasks found - all previous workouts completed")
 
             return True
 
         except Exception as e:
             if self.enable_logging:
-                logging.error(f"Error checking previous day's workout: {e}")
-            # Default to assuming it was completed to avoid blocking
+                logging.error(f"Error checking for carryover workouts: {e}")
+            # Default to assuming no carryover to avoid blocking (conservative approach)
             return True
 
     def create_workout_task(self, title, notes, date=None):

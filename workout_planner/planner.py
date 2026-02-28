@@ -133,6 +133,26 @@ Separate these with "---" on its own line.
 
         return prompt
 
+    def _count_workouts_this_week(self, history):
+        """Count completed workouts this week (Monday-Sunday)."""
+        today = datetime.now()
+        # Get Monday of this week
+        monday = today - timedelta(days=today.weekday())
+        monday_str = monday.strftime("%Y-%m-%d")
+
+        completed_this_week = sum(
+            1 for entry in history
+            if entry["date"] >= monday_str and entry["completed"]
+        )
+
+        return completed_this_week
+
+    def _has_carryover_workout(self):
+        """Check if there's an incomplete workout from a previous day."""
+        # This will be checked by task_checker in the CLI
+        # For now, return False (will be overridden in CLI)
+        return False
+
     def generate_workout(self, yesterday_completed=None):
         """
         Generate today's workout plan.
@@ -142,7 +162,7 @@ Separate these with "---" on its own line.
                                If None, will attempt to determine from history.
 
         Returns:
-            tuple: (task_title, workout_details)
+            tuple: (task_title, workout_details) or None if no workout needed
         """
         config = self._load_config()
         history = self._load_history()
@@ -161,6 +181,20 @@ Separate these with "---" on its own line.
             if self.enable_logging:
                 status = "completed" if yesterday_completed else "not completed/missed"
                 logging.info(f"Yesterday's workout was {status}")
+
+        # Check if we should generate a workout
+        # Get target frequency from config
+        target_frequency = config.get("preferences", {}).get("frequency_per_week", 4)
+        workouts_this_week = self._count_workouts_this_week(history)
+
+        if self.enable_logging:
+            logging.info(f"Workouts completed this week: {workouts_this_week}/{target_frequency}")
+
+        # Don't generate if we've hit the target for the week
+        if workouts_this_week >= target_frequency:
+            if self.enable_logging:
+                logging.info(f"Weekly target reached ({workouts_this_week}/{target_frequency}). No new workout generated.")
+            return None
 
         # Build prompt and call Claude API
         prompt = self._build_prompt(config, history, yesterday_completed)

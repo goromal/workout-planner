@@ -106,29 +106,51 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed):
     Generate today's workout plan and create a Google Task.
 
     This command:
-    1. Checks if yesterday's workout was completed
-    2. Generates a personalized workout using Claude API
-    3. Creates a Google Task with the workout
-    4. Logs the workout to history
+    1. Checks for carryover workouts (incomplete tasks from previous days)
+    2. Checks if weekly workout target has been reached
+    3. If needed, generates a personalized workout using Claude API
+    4. Creates a Google Task with the workout
+    5. Logs the workout to history
+
+    No workout is generated if:
+    - There's a carryover workout (incomplete task exists)
+    - Weekly workout target has been reached
     """
     try:
         # Initialize components
         planner = WorkoutPlanner(**ctx.obj)
         task_checker = TaskChecker(**ctx.obj)
 
-        # Check yesterday's completion status
+        # Check for carryover workout (incomplete task from any previous day)
+        has_carryover = not task_checker.check_previous_day_workout()
+
+        if has_carryover:
+            print("⚠️  Carryover workout detected (incomplete task exists).")
+            print("No new workout generated. Complete existing workout first.")
+            if ctx.obj["enable_logging"]:
+                print("Skipping Claude API call - carryover workout takes precedence.")
+            return
+
+        # Check yesterday's completion status for history tracking
         if force_yesterday_completed is not None:
             yesterday_completed = force_yesterday_completed
             if ctx.obj["enable_logging"]:
                 print(f"Using forced yesterday completion status: {yesterday_completed}")
         else:
-            yesterday_completed = task_checker.check_previous_day_workout()
+            yesterday_completed = True  # No carryover means yesterday was completed
 
-        # Generate workout
+        # Generate workout (may return None if weekly target reached)
         if ctx.obj["enable_logging"]:
-            print("Generating workout plan...")
+            print("Checking workout requirements...")
 
-        task_title, workout_details = planner.generate_workout(yesterday_completed)
+        result = planner.generate_workout(yesterday_completed)
+
+        if result is None:
+            print("✓ Weekly workout target reached. No new workout generated.")
+            print("Skipping Claude API call - weekly goal already met.")
+            return
+
+        task_title, workout_details = result
 
         print("\n" + "=" * 70)
         print("GENERATED WORKOUT")
