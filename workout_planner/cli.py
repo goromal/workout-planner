@@ -180,6 +180,58 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed):
         print("\nWorkout planning complete!")
 
     except Exception as e:
+        error_msg = str(e)
+
+        # Check if this is a quota exceeded error
+        if "CLAUDE_API_QUOTA_EXCEEDED" in error_msg:
+            print("\n" + "=" * 70, file=sys.stderr)
+            print("⚠️  CLAUDE API QUOTA EXCEEDED", file=sys.stderr)
+            print("=" * 70, file=sys.stderr)
+            print(error_msg, file=sys.stderr)
+            print("=" * 70, file=sys.stderr)
+
+            # Create refill task if not in dry-run mode
+            if not dry_run:
+                try:
+                    task_checker = TaskChecker(**ctx.obj)
+
+                    # Check if refill task already exists
+                    from datetime import datetime, timedelta
+                    today = datetime.now()
+                    start_check = today - timedelta(days=7)
+
+                    # Query recent tasks to check for existing refill task
+                    from workout_planner.task_checker import TaskChecker
+                    existing_tasks = task_checker.service.tasks().list(
+                        tasklist=task_checker.task_list_id,
+                        maxResults=100,
+                        showCompleted=False,
+                        dueMin=task_checker._date_to_google_date(start_check),
+                    ).execute()
+
+                    refill_exists = any(
+                        "Refill Claude API" in item.get("title", "")
+                        for item in existing_tasks.get("items", [])
+                    )
+
+                    if not refill_exists:
+                        task_checker.create_workout_task(
+                            "P0: Refill Claude API Tokens",
+                            "Your Claude API quota has been exceeded. Please refill your tokens at:\n\n"
+                            "https://console.anthropic.com/settings/billing\n\n"
+                            "Once refilled, delete this task and workout generation will resume.",
+                            today
+                        )
+                        print("\n✓ Created task: P0: Refill Claude API Tokens", file=sys.stderr)
+                    else:
+                        print("\n(Refill task already exists)", file=sys.stderr)
+
+                except Exception as task_error:
+                    print(f"\nFailed to create refill task: {task_error}", file=sys.stderr)
+
+            sys.exit(1)
+
+        # Regular error handling
         print(f"\nError: {e}", file=sys.stderr)
         if ctx.obj["enable_logging"]:
             traceback.print_exc()

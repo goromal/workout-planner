@@ -242,6 +242,13 @@ Separate these with "---" on its own line.
             return task_title, workout_details
 
         except Exception as e:
+            error_str = str(e)
+            # Check if this is a token depletion error
+            if "insufficient_quota" in error_str or "quota" in error_str.lower():
+                raise Exception(
+                    "CLAUDE_API_QUOTA_EXCEEDED: Your Claude API quota has been exceeded. "
+                    "Please refill your tokens to continue using the workout planner."
+                )
             raise Exception(f"Failed to generate workout with Claude API: {e}")
 
     def log_workout(self, workout_title, workout_details, completed=False, notes=""):
