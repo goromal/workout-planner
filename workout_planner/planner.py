@@ -119,8 +119,9 @@ OUTPUT FORMAT:
 Provide two parts:
 
 1. SHORT TITLE (max 40 chars): A brief description for the task title
-   Format: "P0: Workout: [type/focus]"
-   Example: "P0: Workout: Push Day - Chest Focus"
+   Format: "Workout: [type/focus]"
+   Example: "Workout: Push Day - Chest Focus"
+   NOTE: Do NOT include "P0:" prefix - this will be added automatically
 
 2. WORKOUT DETAILS: Full workout description including:
    - Warmup
@@ -204,7 +205,7 @@ Separate these with "---" on its own line.
 
         try:
             message = self.client.messages.create(
-                model="claude-3-5-sonnet-20240620",
+                model="claude-haiku-4-5-20251001",
                 max_tokens=2048,
                 temperature=0.7,
                 messages=[{"role": "user", "content": prompt}],
@@ -219,12 +220,20 @@ Separate these with "---" on its own line.
                 workout_details = parts[1].strip()
             else:
                 # Fallback if format isn't followed
-                task_title = "P0: Workout: Generated Plan"
+                task_title = "Workout: Generated Plan"
                 workout_details = response_text
 
-            # Ensure title starts with P0:
+            # Clean up title - remove markdown headers and extra formatting
+            task_title = task_title.replace("#", "").strip()
+
+            # Ensure title starts with P0: (but not duplicate)
             if not task_title.startswith("P0:"):
                 task_title = f"P0: {task_title}"
+
+            # Remove duplicate P0: prefix if it exists
+            if task_title.count("P0:") > 1:
+                # Remove all P0: and add one at the start
+                task_title = "P0: " + task_title.replace("P0:", "").strip()
 
             # Ensure reasonable title length
             if len(task_title) > 100:
