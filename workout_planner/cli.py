@@ -260,7 +260,6 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed, tactical_po
                     refill_task_checker = TaskChecker(**ctx.obj)
 
                     # Check if refill task already exists
-                    from datetime import datetime, timedelta
                     today = datetime.now()
                     start_check = today - timedelta(days=7)
 
