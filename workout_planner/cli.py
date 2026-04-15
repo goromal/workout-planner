@@ -1,10 +1,49 @@
+import asyncio
 import click
 import sys
 import traceback
+from datetime import datetime, timedelta
 
 from workout_planner.defaults import WorkoutPlannerDefaults as WPD
 from workout_planner.planner import WorkoutPlanner
 from workout_planner.task_checker import TaskChecker
+
+
+def report_workout_to_tactical(tactical_port, date, completed, on_track):
+    async def cmd_impl(port, year, month, day):
+        from grpc import aio
+        from aapis.tactical.v1 import tactical_pb2_grpc, tactical_pb2
+
+        if completed:
+            result_type = tactical_pb2.SurveyQuestionResultType.SURVEY_QUESTION_RESULT_TYPE_FULL_CREDIT
+        elif on_track:
+            result_type = tactical_pb2.SurveyQuestionResultType.SURVEY_QUESTION_RESULT_TYPE_PARTIAL_CREDIT
+        else:
+            result_type = tactical_pb2.SurveyQuestionResultType.SURVEY_QUESTION_RESULT_TYPE_NO_CREDIT
+
+        async with aio.insecure_channel(f"localhost:{port}") as channel:
+            stub = tactical_pb2_grpc.TacticalServiceStub(channel)
+            try:
+                _ = await stub.SubmitSurveyResult(
+                    tactical_pb2.SubmitSurveyResultRequest(
+                        result=tactical_pb2.SurveyResult(
+                            year=year,
+                            month=month,
+                            day=day,
+                            survey_name="Heart Care",
+                            results=[
+                                tactical_pb2.SurveyQuestionResult(
+                                    question_name="Planned workout",
+                                    result=result_type,
+                                )
+                            ],
+                        )
+                    )
+                )
+            except:
+                pass
+
+    asyncio.run(cmd_impl(tactical_port, date.year, date.month, date.day))
 
 
 @click.group()
@@ -101,7 +140,15 @@ def cli(
     default=None,
     help="Override yesterday's completion status (True/False).",
 )
-def generate(ctx: click.Context, dry_run, force_yesterday_completed):
+@click.option(
+    "--tactical-port",
+    "tactical_port",
+    type=int,
+    default=60060,
+    show_default=True,
+    help="Tactical server port to report workout result to.",
+)
+def generate(ctx: click.Context, dry_run, force_yesterday_completed, tactical_port):
     """
     Generate today's workout plan and create a Google Task.
 
@@ -124,6 +171,26 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed):
         # Check for carryover workout (incomplete task from any previous day)
         has_carryover = not task_checker.check_previous_day_workout()
 
+        # Determine yesterday's completion and report to tactical server
+        yesterday = datetime.now() - timedelta(days=1)
+        if force_yesterday_completed is not None:
+            yesterday_completed = force_yesterday_completed
+        else:
+            yesterday_completed = not has_carryover
+
+        if not yesterday_completed:
+            config = planner._load_config()
+            target_frequency = config.get("preferences", {}).get("frequency_per_week", 4)
+            completed_this_week = task_checker.count_completed_workouts_this_week()
+            today = datetime.now()
+            days_remaining_this_week = 7 - today.weekday()  # includes today
+            on_track = (completed_this_week + days_remaining_this_week) >= target_frequency
+        else:
+            on_track = True
+
+        if not dry_run:
+            report_workout_to_tactical(tactical_port, yesterday, yesterday_completed, on_track)
+
         if has_carryover:
             print("⚠️  Carryover workout detected (incomplete task exists).")
             print("No new workout generated. Complete existing workout first.")
@@ -133,11 +200,8 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed):
 
         # Check yesterday's completion status for history tracking
         if force_yesterday_completed is not None:
-            yesterday_completed = force_yesterday_completed
             if ctx.obj["enable_logging"]:
                 print(f"Using forced yesterday completion status: {yesterday_completed}")
-        else:
-            yesterday_completed = True  # No carryover means yesterday was completed
 
         # Generate workout (may return None if weekly target reached)
         if ctx.obj["enable_logging"]:

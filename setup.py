@@ -9,6 +9,7 @@ setup(
         "pyyaml",
         "anthropic",
         "easy-google-auth",
+        "grpcio",
     ],
     entry_points={
         "console_scripts": [

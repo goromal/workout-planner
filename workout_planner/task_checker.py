@@ -107,6 +107,46 @@ class TaskChecker:
             return True
 
     @_check_valid_interface
+    def count_completed_workouts_this_week(self, prefix="P0: Workout"):
+        """
+        Count completed workout tasks from Monday of the current week through today.
+
+        Returns:
+            int: Number of completed workout tasks this week
+        """
+        today = datetime.now()
+        monday = today - timedelta(days=today.weekday())
+        monday_start_str = self._date_to_google_date(monday - timedelta(days=1))
+        tomorrow_str = self._date_to_google_date(today + timedelta(days=1))
+
+        try:
+            results = (
+                self.service.tasks()
+                .list(
+                    tasklist=self.task_list_id,
+                    maxResults=100,
+                    showCompleted=True,
+                    showHidden=True,
+                    dueMin=monday_start_str,
+                    dueMax=tomorrow_str,
+                )
+                .execute()
+            )
+            items = results.get("items", [])
+            count = sum(
+                1 for item in items
+                if item.get("title", "").startswith(prefix)
+                and item.get("status") == "completed"
+            )
+            if self.enable_logging:
+                logging.info(f"Completed workout tasks this week: {count}")
+            return count
+        except Exception as e:
+            if self.enable_logging:
+                logging.error(f"Error counting completed workouts: {e}")
+            return 0
+
+    @_check_valid_interface
     def create_workout_task(self, title, notes, date=None):
         """
         Create a workout task in Google Tasks.
