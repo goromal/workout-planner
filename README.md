@@ -13,6 +13,16 @@ AI-powered strength workout planner that integrates with Google Tasks.
 
 Create `~/configs/workout-config.yaml` with your workout preferences.
 
+### Rest days and postponed workouts
+
+- Set `preferences.rest_days` (e.g. `[sunday]`) to skip those days. On a rest
+  day no workout is generated and the Claude API isn't called. A rest day is
+  never reported to the tactical server as missed, and the weekly on-track
+  check only counts remaining training days.
+- To postpone a workout, move its task's due date up to 7 days ahead. Until that
+  day, the open task blocks a new workout and the days in between are reported
+  as not completed.
+
 ## Usage
 
 ```bash

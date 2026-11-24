@@ -34,6 +34,12 @@ preferences:
   # How many days per week you want to train
   frequency_per_week: 4
 
+  # Days you never train on (default: none). No workout is generated on these
+  # days, and they aren't reported as missed. Valid names: monday, tuesday,
+  # wednesday, thursday, friday, saturday, sunday (case-insensitive).
+  # rest_days:
+  #   - sunday
+
   # Training style: strength, hypertrophy, endurance, or mixed
   style: mixed
 
