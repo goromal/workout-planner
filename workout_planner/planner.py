@@ -9,6 +9,7 @@ import yaml
 from anthropic import Anthropic
 
 from workout_planner.defaults import WorkoutPlannerDefaults as WPD
+from workout_planner.schedule import WEEKDAYS
 
 
 class WorkoutPlanner:
@@ -83,8 +84,25 @@ class WorkoutPlanner:
         if self.enable_logging:
             logging.info(f"Logged workout entry for {entry['date']}")
 
-    def _build_prompt(self, config, history, yesterday_completed):
+    def _build_prompt(self, config, history, yesterday_completed, rest_days, yesterday_was_rest_day):
         """Build the prompt for Claude API."""
+        if yesterday_was_rest_day:
+            yesterday_status = "Yesterday was a scheduled rest day."
+        elif yesterday_completed:
+            yesterday_status = "Completed - Good job! Consider progression."
+        else:
+            yesterday_status = "Missed - Consider adjusting today's plan if needed."
+
+        # Only mention rest days when some are configured, so the prompt is
+        # unchanged otherwise
+        rest_day_instruction = ""
+        if rest_days:
+            names = ", ".join(WEEKDAYS[day].capitalize() for day in sorted(rest_days))
+            rest_day_instruction = (
+                f"\n7. The user does not train on: {names}. Plan the split and "
+                "progression across training days only; don't assume a 7-day cycle."
+            )
+
         # Format config
         config_str = yaml.dump(config, default_flow_style=False)
 
@@ -105,7 +123,7 @@ RECENT WORKOUT HISTORY (last 7 days):
 {history_str if history_str else "No recent history"}
 
 YESTERDAY'S WORKOUT STATUS:
-{"Completed - Good job! Consider progression." if yesterday_completed else "Missed - Consider adjusting today's plan if needed."}
+{yesterday_status}
 
 INSTRUCTIONS:
 1. Generate a specific, actionable workout plan for today
@@ -113,7 +131,7 @@ INSTRUCTIONS:
 3. Follow the specified training split if provided
 4. Ensure appropriate progression based on history
 5. Keep the workout realistic (30-45 min as specified in constraints)
-6. If yesterday was missed, don't overcompensate - stay consistent
+6. If yesterday was missed, don't overcompensate - stay consistent{rest_day_instruction}
 
 OUTPUT FORMAT:
 Provide two parts:
@@ -151,33 +169,23 @@ Separate these with "---" on its own line.
 
         return prompt
 
-    def _count_workouts_this_week(self, history):
-        """Count completed workouts this week (Monday-Sunday)."""
-        today = datetime.now()
-        # Get Monday of this week
-        monday = today - timedelta(days=today.weekday())
-        monday_str = monday.strftime("%Y-%m-%d")
-
-        completed_this_week = sum(
-            1 for entry in history
-            if entry["date"] >= monday_str and entry["completed"]
-        )
-
-        return completed_this_week
-
     def _has_carryover_workout(self):
         """Check if there's an incomplete workout from a previous day."""
         # This will be checked by task_checker in the CLI
         # For now, return False (will be overridden in CLI)
         return False
 
-    def generate_workout(self, yesterday_completed=None):
+    def generate_workout(self, yesterday_completed, completed_this_week, rest_days, yesterday_was_rest_day):
         """
         Generate today's workout plan.
 
         Args:
             yesterday_completed: Boolean indicating if yesterday's workout was done.
                                If None, will attempt to determine from history.
+            completed_this_week: Number of workout tasks completed this week.
+            rest_days: Weekday indices (Monday = 0) the user doesn't train on.
+            yesterday_was_rest_day: True if yesterday was a rest day and its status
+                               wasn't forced.
 
         Returns:
             tuple: (task_title, workout_details) or None if no workout needed
@@ -202,20 +210,21 @@ Separate these with "---" on its own line.
 
         # Check if we should generate a workout
         # Get target frequency from config
-        target_frequency = config.get("preferences", {}).get("frequency_per_week", 4)
-        workouts_this_week = self._count_workouts_this_week(history)
+        target_frequency = (config.get("preferences") or {}).get("frequency_per_week", 4)
 
         if self.enable_logging:
-            logging.info(f"Workouts completed this week: {workouts_this_week}/{target_frequency}")
+            logging.info(f"Workouts completed this week: {completed_this_week}/{target_frequency}")
 
         # Don't generate if we've hit the target for the week
-        if workouts_this_week >= target_frequency:
+        if completed_this_week >= target_frequency:
             if self.enable_logging:
-                logging.info(f"Weekly target reached ({workouts_this_week}/{target_frequency}). No new workout generated.")
+                logging.info(f"Weekly target reached ({completed_this_week}/{target_frequency}). No new workout generated.")
             return None
 
         # Build prompt and call Claude API
-        prompt = self._build_prompt(config, history, yesterday_completed)
+        prompt = self._build_prompt(
+            config, history, yesterday_completed, rest_days, yesterday_was_rest_day
+        )
 
         # Get model from config, default to haiku if not specified
         model = config.get("api", {}).get("model", "claude-haiku-4-5-20251001")

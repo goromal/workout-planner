@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 from workout_planner.defaults import WorkoutPlannerDefaults as WPD
 from workout_planner.planner import WorkoutPlanner
+from workout_planner.schedule import is_rest_day, parse_rest_days, training_days_remaining
 from workout_planner.task_checker import TaskChecker
 
 
@@ -160,6 +161,7 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed, tactical_po
     5. Logs the workout to history
 
     No workout is generated if:
+    - Today is one of the configured rest days
     - There's a carryover workout (incomplete task exists)
     - Weekly workout target has been reached
     """
@@ -168,28 +170,44 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed, tactical_po
         planner = WorkoutPlanner(**ctx.obj)
         task_checker = TaskChecker(**ctx.obj)
 
-        # Check for carryover workout (incomplete task from any previous day)
+        # Parse rest days first so a bad value fails before anything is reported
+        config = planner._load_config()
+        rest_days = parse_rest_days(config)
+
+        # Check for carryover workout (incomplete task from a previous day, today,
+        # or up to a week ahead if it was postponed)
         has_carryover = not task_checker.check_previous_day_workout()
+        completed_this_week = task_checker.count_completed_workouts_this_week()
 
         # Determine yesterday's completion and report to tactical server
-        yesterday = datetime.now() - timedelta(days=1)
+        today = datetime.now()
+        yesterday = today - timedelta(days=1)
         if force_yesterday_completed is not None:
             yesterday_completed = force_yesterday_completed
         else:
             yesterday_completed = not has_carryover
 
         if not yesterday_completed:
-            config = planner._load_config()
-            target_frequency = config.get("preferences", {}).get("frequency_per_week", 4)
-            completed_this_week = task_checker.count_completed_workouts_this_week()
-            today = datetime.now()
-            days_remaining_this_week = 7 - today.weekday()  # includes today
+            target_frequency = (config.get("preferences") or {}).get("frequency_per_week", 4)
+            days_remaining_this_week = training_days_remaining(today, rest_days)
             on_track = (completed_this_week + days_remaining_this_week) >= target_frequency
         else:
             on_track = True
 
-        if not dry_run:
+        # A rest day yesterday gets no report unless its status was forced
+        yesterday_was_rest_day = (
+            is_rest_day(yesterday, rest_days) and force_yesterday_completed is None
+        )
+        if yesterday_was_rest_day:
+            print(f"Yesterday ({yesterday.strftime('%A')}) was a rest day. Not reporting it.")
+        elif not dry_run:
             report_workout_to_tactical(tactical_port, yesterday, yesterday_completed, on_track)
+
+        if is_rest_day(today, rest_days):
+            print(f"Today is a rest day ({today.strftime('%A')}). No workout generated.")
+            if ctx.obj["enable_logging"]:
+                print("Skipping Claude API call - rest day.")
+            return
 
         if has_carryover:
             print("⚠️  Carryover workout detected (incomplete task exists).")
@@ -207,7 +225,9 @@ def generate(ctx: click.Context, dry_run, force_yesterday_completed, tactical_po
         if ctx.obj["enable_logging"]:
             print("Checking workout requirements...")
 
-        result = planner.generate_workout(yesterday_completed)
+        result = planner.generate_workout(
+            yesterday_completed, completed_this_week, rest_days, yesterday_was_rest_day
+        )
 
         if result is None:
             print("✓ Weekly workout target reached. No new workout generated.")
